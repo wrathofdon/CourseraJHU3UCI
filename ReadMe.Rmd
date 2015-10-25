@@ -1,0 +1,83 @@
+---
+title: "ReadMe"
+author: "Don Pham"
+date: "October 25, 2015"
+output: html_document
+---
+
+## 1. Merges the training and the test sets to create one data set.
+
+```
+xtrain <- read.table("train/X_train.txt")
+ytrain <- read.table("train/Y_train.txt")
+subtrain <- read.table("train/subject_train.txt")
+xtest <- read.table("test/X_test.txt")
+ytest <- read.table("test/Y_test.txt")
+subtest <- read.table("test/subject_test.txt")
+```
+
+We start by loading up all the tables into variables.
+
+```
+features <- read.table("features.txt")
+features_names <- features[,2]
+colnames(xtest) <- features_names
+colnames(xtrain) <- features_names
+```
+
+The feature names were pulled from the features.txt file and converted to a vector, which was then used on the xtest and xtrain files.
+
+```
+xmerge <- rbind(xtest, xtrain)
+ymerge <- rbind(ytest, ytrain)
+submerge <- rbind(subtest, subtrain)
+colnames(submerge) <- c("subject")
+colnames(ymerge) <- c("activity")
+allmerge <- cbind(xmerge, ymerge, submerge)
+```
+
+Finally, we merge everything together with rbind and cbind.
+
+## 2.Extracts only the measurements on the mean and standard deviation for each measurement. 
+
+```
+features_means <- grep("mean", features_names)
+features_std <- grep("std", features_names)
+means_and_std <- allmerge[sort(c(features_means, features_std))]
+```
+
+We use the grep feature to make an index of all the column names with "mean" and "std", then combine them together and create a subset.
+
+## 3.Uses descriptive activity names to name the activities in the data set
+
+```
+activity <- read.table("activity_labels.txt")
+activity_names <- activity[,2]
+allmerge$activity <- factor(allmerge$activity)
+levels(allmerge$activity) <- activity_names
+```
+
+We convert the activity column into a factored vector, then rename the levels to match with the imported activity file.
+
+## 4.Appropriately labels the data set with descriptive variable names. 
+
+```
+colnames(allmerge) <- gsub("Acc", "Accelerometer", names(allmerge))
+colnames(allmerge) <- gsub("Mag", "Magnitude", names(allmerge))
+colnames(allmerge) <- gsub("Gyro", "Gyroscope", names(allmerge))
+means_and_std <- allmerge[sort(c(features_means, features_std))]
+```
+
+We use gsub to replace some of the text, the create a new subset with the new column names.
+
+## 5.From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+
+```
+library(reshape2)
+DF <- data.frame(means_and_std, subject = allmerge$subject, activity = allmerge$activity)
+activityMelt <- melt(DF,id=c("subject", "activity"),measure.vars=colnames(DF[,1:79]))
+fullymelted <- dcast(activityMelt, activity + subject ~ variable,mean)
+write.table(fullymelted, "tidy.txt", row.names = FALSE)
+```
+
+Finally, we convert the data to a data frame, and use the melt function to group by activity/subject and average the results.
